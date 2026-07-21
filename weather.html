@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Погода - Киров и область</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-card: rgba(255, 255, 255, 0.98);
+            --bg-period: #f1f5f9;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .floating-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.25;
+            animation: float 12s ease-in-out infinite;
+        }
+
+        .orb-1 { width: 350px; height: 350px; background: #10b981; top: 5%; left: 10%; animation-delay: 0s; }
+        .orb-2 { width: 280px; height: 280px; background: #f59e0b; bottom: 10%; right: 5%; animation-delay: 4s; }
+        .orb-3 { width: 220px; height: 220px; background: #ec4899; top: 45%; right: 15%; animation-delay: 8s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -60px) scale(1.15); }
+            66% { transform: translate(-30px, 40px) scale(0.85); }
+        }
+
+        /* Particles */
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            animation: particleFloat 18s linear infinite;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(120px); opacity: 0; }
+        }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-icon {
+            font-size: 64px;
+            animation: loaderSpin 2s ease-in-out infinite;
+        }
+
+        @keyframes loaderSpin {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+        }
+
+        .loader-bar-container {
+            width: 220px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .loader-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #6366f1, #ec4899);
+            width: 0%;
+            animation: loadProgress 2s ease-out forwards;
+            border-radius: 3px;
+        }
+
+        @keyframes loadProgress { to { width: 100%; } }
+
+        .loader-text {
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Clock widget */
+        .clock-widget {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 14px;
+            padding: 14px 22px;
+            z-index: 100;
+            animation: slideInRight 0.6s ease-out;
+            min-width: 140px;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .clock-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 500;
+            color: white;
+            letter-spacing: 1px;
+        }
+
+        .clock-date {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .clock-year {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 1px;
+            font-weight: 500;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+            padding-top: 100px;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 8px;
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .update-time {
+            text-align: center;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Refresh button */
+        .refresh-btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08));
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0 auto 32px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: relative;
+            overflow: hidden;
+            font-family: inherit;
+            letter-spacing: 0.3px;
+        }
+
+        .refresh-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .refresh-btn:hover::before { opacity: 1; }
+
+        .refresh-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255,255,255,0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .refresh-btn:active { transform: translateY(-1px); }
+
+        .refresh-btn.loading .btn-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .btn-icon {
+            font-size: 18px;
+            transition: transform 0.3s;
+        }
+
+        /* Location cards */
+        .locations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .location-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            animation: cardSlideIn 0.5s ease-out backwards;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .location-card:nth-child(1) { animation-delay: 0.05s; }
+        .location-card:nth-child(2) { animation-delay: 0.1s; }
+        .location-card:nth-child(3) { animation-delay: 0.15s; }
+        .location-card:nth-child(4) { animation-delay: 0.2s; }
+
+        @keyframes cardSlideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .location-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+        }
+
+        .location-name {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-pin {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .time-periods {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .period {
+            background: var(--bg-period);
+            border-radius: 12px;
+            padding: 14px;
+            transition: all 0.25s ease;
+        }
+
+        .period:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            background: #e8ecf1;
+        }
+
+        .period-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .period-icon {
+            font-size: 16px;
+        }
+
+        .period-name {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+
+        .temperature {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 4px 0 10px;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -1px;
+        }
+
+        .temperature.positive, .temperature.negative { color: #000000; }
+
+        .period-data {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .data-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .data-icon {
+            font-size: 14px;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .data-label {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.92);
+            color: white;
+            padding: 24px;
+            border-radius: var(--radius);
+            text-align: center;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .error p:first-child {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .retry-btn {
+            margin-top: 14px;
+            padding: 10px 24px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .retry-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .locations-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 16px;
+                padding-top: 90px;
+            }
+
+            .clock-widget {
+                top: 12px;
+                right: 12px;
+                padding: 10px 16px;
+                min-width: auto;
+            }
+
+            .clock-time {
+                font-size: 22px;
+            }
+
+            .clock-date { font-size: 12px; }
+            .clock-year { font-size: 10px; }
+
+            h1 { font-size: 1.5rem; margin-bottom: 4px; }
+            .subtitle { font-size: 13px; margin-bottom: 16px; }
+
+            .locations-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .location-card {
+                padding: 20px;
+            }
+
+            .location-name {
+                font-size: 1.2rem;
+                margin-bottom: 14px;
+            }
+
+            .time-periods {
+                gap: 10px;
+            }
+
+            .period {
+                padding: 12px;
+            }
+
+            .temperature {
+                font-size: 1.7rem;
+                margin: 2px 0 8px;
+            }
+
+            .data-item { font-size: 0.78rem; }
+
+            .refresh-btn {
+                padding: 12px 24px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .clock-time { font-size: 18px; }
+            .temperature { font-size: 1.5rem; }
+            .location-name { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background animations -->
+    <div class="bg-animation">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
+    </div>
+
+    <div class="particles" id="particles"></div>
+
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="loader-icon">🌤️</div>
+        <div class="loader-bar-container">
+            <div class="loader-bar"></div>
+        </div>
+        <div class="loader-text">Загрузка погоды</div>
+    </div>
+
+    <!-- Clock widget -->
+    <div class="clock-widget">
+        <div class="clock-time" id="clockTime">00:00:00</div>
+        <div class="clock-date" id="clockDate">1 января</div>
+        <div class="clock-year" id="clockYear">2026</div>
+    </div>
+
+    <div class="container">
+        <h1>🌤️ Погода в Кировской области</h1>
+        <p class="subtitle">Актуальный прогноз для 4 локаций</p>
+        <div class="update-time" id="updateTime">Загрузка данных...</div>
+        <div style="text-align: center;">
+            <button class="refresh-btn" onclick="loadWeather()" id="refreshBtn">
+                <span class="btn-icon">🔄</span>
+                Обновить данные
+            </button>
+        </div>
+
+        <div id="weatherContainer">
+            <div class="loading">⏳ Загрузка данных о погоде...</div>
+        </div>
+    </div>
+
+    <script>
+        const locations = [
+            { name: 'г. Киров', lat: 58.6035, lon: 49.6680, type: 'city' },
+            { name: 'г. Зуевка', lat: 58.3833, lon: 50.4333, type: 'city' },
+            { name: 'д. Смирновы', lat: 58.4500, lon: 50.1500, type: 'village' },
+            { name: 'д. Заборье', lat: 58.5000, lon: 50.2000, type: 'village' }
+        ];
+
+        const timePeriods = [
+            { key: 'morning', name: 'Утро', icon: '🌅' },
+            { key: 'afternoon', name: 'День', icon: '️' },
+            { key: 'evening', name: 'Вечер', icon: '' },
+            { key: 'night', name: 'Ночь', icon: '🌙' }
+        ];
+
+        // Clock functionality
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clockTime').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+            document.getElementById('clockDate').textContent = `${now.getDate()} ${months[now.getMonth()]}`;
+            document.getElementById('clockYear').textContent = now.getFullYear();
+        }
+
+        // Create particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 25; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 18 + 's';
+                particle.style.animationDuration = (12 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // Hide preloader
+        function hidePreloader() {
+            setTimeout(() => {
+                document.getElementById('preloader').classList.add('hidden');
+            }, 2000);
+        }
+
+        async function loadWeather() {
+            const container = document.getElementById('weatherContainer');
+            const updateTime = document.getElementById('updateTime');
+            const refreshBtn = document.getElementById('refreshBtn');
+
+            refreshBtn.classList.add('loading');
+            container.innerHTML = '<div class="loading">⏳ Загрузка данных о погоде...</div>';
+
+            try {
+                const weatherData = await Promise.all(locations.map(async loc => {
+                    try {
+                        const response = await fetch(
+                            `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto&forecast_days=1`
+                        );
+                        if (!response.ok) throw new Error('Ошибка загрузки');
+                        const data = await response.json();
+                        return { ...loc, data };
+                    } catch (err) {
+                        console.error(`Ошибка для ${loc.name}:`, err);
+                        return { ...loc, error: true };
+                    }
+                }));
+
+                updateTime.textContent = `✨ Обновлено: ${new Date().toLocaleString('ru-RU')}`;
+
+                let html = '<div class="locations-grid">';
+
+                weatherData.forEach((item, index) => {
+                    if (item.error) {
+                        html += `
+                            <div class="location-card" style="animation-delay: ${index * 0.05}s">
+                                <div class="location-name">
+                                    <div class="location-pin">⚠️</div>
+                                    ${item.name}
+                                </div>
+                                <div style="color: var(--danger); text-align: center; padding: 24px; font-weight: 600;">
+                                    Не удалось загрузить данные
+                                </div>
+                            </div>`;
+                        return;
+                    }
+
+                    const hourly = item.data.hourly;
+
+                    html += `
+                        <div class="location-card" style="animation-delay: ${index * 0.05}s">
+                            <div class="location-name">
+                                <div class="location-pin">${item.type === 'city' ? '️' : '🏘️'}</div>
+                                ${item.name}
+                            </div>
+                            <div class="time-periods">`;
+
+                    timePeriods.forEach(period => {
+                        let hourIndex;
+                        switch(period.key) {
+                            case 'morning': hourIndex = 9; break;
+                            case 'afternoon': hourIndex = 14; break;
+                            case 'evening': hourIndex = 20; break;
+                            case 'night': hourIndex = 2; break;
+                        }
+
+                        const temp = hourly.temperature_2m[hourIndex] ?? '--';
+                        const humidity = hourly.relative_humidity_2m[hourIndex] ?? '--';
+                        const windSpeed = hourly.wind_speed_10m[hourIndex] ?? '--';
+                        const weatherCode = hourly.weather_code[hourIndex] ?? 0;
+                        const weatherIcon = getWeatherIcon(weatherCode);
+                        const tempClass = temp > 0 ? 'positive' : temp < 0 ? 'negative' : '';
+
+                        html += `
+                            <div class="period">
+                                <div class="period-header">
+                                    <span class="period-icon">${period.icon}</span>
+                                    <span class="period-name">${period.name}</span>
+                                </div>
+                                <div class="temperature ${tempClass}">${temp > 0 ? '+' : ''}${temp}°</div>
+                                <div class="period-data">
+                                    <div class="data-item">
+                                        <span class="data-icon">💧</span>
+                                        <span><span class="data-label">Влажность:</span> ${humidity}%</span>
+                                    </div>
+                                    <div class="data-item">
+                                        <span class="data-icon"></span>
+                                        <span><span class="data-label">Ветер:</span> ${windSpeed} км/ч</span>
+                                    </div>
+                                    <div class="data-item">
+                                        <span class="data-icon">${weatherIcon}</span>
+                                        <span>${getWeatherDescription(weatherCode)}</span>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `
+                    <div class="error">
+                        <p>❌ Ошибка при загрузке данных</p>
+                        <p style="font-size: 0.9rem; opacity: 0.9;">${err.message}</p>
+                        <button class="retry-btn" onclick="loadWeather()">🔄 Повторить</button>
+                    </div>`;
+            } finally {
+                refreshBtn.classList.remove('loading');
+            }
+        }
+
+        function getWeatherIcon(code) {
+            if (code === 0) return '☀️';
+            if (code <= 3) return '⛅';
+            if (code <= 48) return '️';
+            if (code <= 67) return '🌧️';
+            if (code <= 77) return '❄️';
+            if (code <= 82) return '🌦️';
+            if (code <= 86) return '❄️';
+            if (code <= 99) return '️';
+            return '🌤️';
+        }
+
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: 'Ясно', 1: 'Преимущ. ясно', 2: 'Переменная облачность',
+                3: 'Пасмурно', 45: 'Туман', 48: 'Изморозь',
+                51: 'Лёгкая морось', 53: 'Морось', 55: 'Сильная морось',
+                61: 'Небольшой дождь', 63: 'Дождь', 65: 'Сильный дождь',
+                71: 'Небольшой снег', 73: 'Снег', 75: 'Сильный снег',
+                77: 'Снежные зёрна', 80: 'Небольшой ливень', 81: 'Ливень',
+                82: 'Сильный ливень', 85: 'Снегопад', 86: 'Сильный снегопад',
+                95: 'Гроза', 96: 'Гроза с градом'
+            };
+            return descriptions[code] || '—';
+        }
+
+        // Initialize
+        createParticles();
+        updateClock();
+        setInterval(updateClock, 1000);
+        hidePreloader();
+        loadWeather();
+        setInterval(loadWeather, 15 * 60 * 1000);
+    </script>
+</body>
+</html>
